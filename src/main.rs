@@ -174,7 +174,7 @@ impl iced::Application for SudokuSolver {
     }
 
     fn theme(&self) -> iced::Theme {
-        iced::Theme::Light
+        iced::Theme::Dark
     }
 
     fn subscription(&self) -> iced::Subscription<Self::Message> {
