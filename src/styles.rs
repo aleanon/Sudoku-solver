@@ -1,4 +1,4 @@
-use iced::{border::Radius, widget, Theme};
+use iced::{border::Radius, widget::{self, button::StyleSheet}, Theme};
 
 
 pub struct ThickRule;
@@ -19,3 +19,12 @@ impl iced::widget::rule::StyleSheet for ThickRule {
     }
 }
 
+pub struct ActiveTab;
+
+impl iced::widget::button::StyleSheet for ActiveTab {
+  type Style = Theme;
+
+  fn active(&self, style: &Self::Style) -> widget::button::Appearance {
+    style.hovered(&iced::theme::Button::Primary)
+  }
+}

@@ -1,16 +1,25 @@
-use iced::Command;
+pub mod key_message;
 
-use crate::{sudoku::Sudoku, SudokuSolver};
+use iced::{Command, Theme};
 
+use crate::{styles::ActiveTab, sudoku::Sudoku, view::tab::Tab, SudokuSolver};
 
+use self::key_message::KeyMessage;
+
+#[derive(Debug, Clone)]
+pub enum SudokuSize {
+  NineByNine,
+  SixteenBySixteen,
+  TwentyfiveByTwentyfive,
+}
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Tab,
-    Up,
-    Down,
-    Right,
-    Left,
+    KeyMessage(KeyMessage),
+    ToggleTheme,
+    NewSudoku(SudokuSize),
+    SetActiveTab(usize),
+    NewTab,
     Solve,
     Clear,
     Input(u8),
@@ -22,12 +31,12 @@ pub enum Message {
 impl<'a> Message {
     pub fn update(self, appdata: &'a mut SudokuSolver) -> Command<Message> {
         match self {
-            Message::Tab => Self::tab(appdata),
-            Message::Up => Self::up(appdata),
-            Message::Down => Self::down(appdata),
-            Message::Left => Self::left(appdata),
-            Message::Right => Self::right(appdata),
+            Message::KeyMessage(key_message) => key_message.update(appdata),
             Message::Solve => Self::solve(appdata),
+            Message::ToggleTheme => Self::toggle_theme(appdata),
+            Message::NewSudoku(sudoku_size) => Self::new_sudoku(sudoku_size, appdata),
+            Message::SetActiveTab(tab_id) => Self::set_active_tab(tab_id, appdata),
+            Message::NewTab => Self::create_new_tab(appdata),
             Message::Clear => Self::clear(appdata),
             Message::Input(input) => Self::input(input, appdata),
             Message::Select(row, column) => Self::select(row, column, appdata),
@@ -36,109 +45,117 @@ impl<'a> Message {
         }
     }
     
-    fn tab(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some((ref mut row, ref mut column)) = appdata.selected {
-          let max_index = appdata.sudoku.size as usize -1;
-          if *column < max_index {
-              *column += 1
-          } else if *row < max_index {
-              *column = 0;
-              *row += 1
-          } else {*row = 0; *column = 0}
-      } else {
-          appdata.selected = Some((0,0))
+    fn toggle_theme(appdata: &'a mut SudokuSolver) -> Command<Message> {
+      match appdata.theme {
+        Theme::Dark => appdata.theme = Theme::Light,
+        Theme::Light => appdata.theme = Theme::Dark,
+        _ => {}
       }
 
       Command::none()
     }
 
-    fn up(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some((ref mut row, _)) = appdata.selected {
-          if *row > 0 {*row -= 1} 
+    fn new_sudoku(sudoku_size: SudokuSize, appdata: &'a mut SudokuSolver) -> Command<Message> {
+      match sudoku_size {
+        SudokuSize::NineByNine => appdata.tabs[appdata.active_tab].sudoku = Some(Sudoku::new(9)),
+        SudokuSize::SixteenBySixteen => appdata.tabs[appdata.active_tab].sudoku = Some(Sudoku::new(16)),
+        SudokuSize::TwentyfiveByTwentyfive => appdata.tabs[appdata.active_tab].sudoku = Some(Sudoku::new(25)),  
       }
 
       Command::none()
     }
 
-    fn down(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some((ref mut row, _)) = appdata.selected {
-          if *row < (appdata.sudoku.size as usize) - 1 {*row += 1}
-      }
+    fn set_active_tab(tab_id: usize, appdata:&'a mut SudokuSolver) -> Command<Message> {
+      appdata.active_tab = tab_id;
 
       Command::none()
     }
 
-    fn left(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some((_, ref mut column)) = appdata.selected {
-          if *column > 0 {*column -= 1}
-      }
+    fn create_new_tab(appdata: &'a mut SudokuSolver) -> Command<Message> {
+      let tab = Tab::new();
+      let tab_id = appdata.tabs.len();
+      appdata.tabs.push(tab);
+      appdata.active_tab = tab_id;
 
       Command::none()
     }
 
-    fn right(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some((_, ref mut column)) = appdata.selected {
-          if *column < (appdata.sudoku.size as usize) - 1 {*column += 1}
-      }
-
-      Command::none()
-    }
-
+    
     fn solve(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some(conflicts) = appdata.sudoku.validate() {
-          appdata.sudoku.conflicts = conflicts;
-      } else {
-          appdata.sudoku.conflicts.clear();
-          let sudoku = appdata.sudoku.clone();
-          return Command::perform(
-              async move {sudoku.solve()}, 
-              |result| Message::SolveResult(result)
-          )
+      let active_tab = &mut appdata.tabs[appdata.active_tab];
+      let sudoku_maybe = &mut active_tab.sudoku;
+      if let Some(ref mut sudoku) = sudoku_maybe {
+        if let Some(conflicts) = sudoku.validate() {
+            sudoku.conflicts = conflicts;
+        } else {
+            active_tab.solving = true;
+            active_tab.selected = None;
+            sudoku.conflicts.clear();
+            let sudoku = sudoku.clone();
+            return Command::perform(
+                async move {sudoku.solve()}, 
+                |result| Message::SolveResult(result)
+            )
+        }
+
       }
 
       Command::none()
     }
 
     fn clear(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      for row in appdata.sudoku.puzzle.iter_mut() {
-          for n in row {
-              *n = 0
-          }
+      if let Some(ref mut sudoku) = appdata.tabs[appdata.active_tab].sudoku {
+        for row in sudoku.puzzle.iter_mut() {
+            for n in row {
+                *n = 0
+            }
+        }
+        sudoku.conflicts.clear();
       }
-      appdata.sudoku.conflicts.clear();
 
       Command::none()
     }
 
     fn input(input: u8, appdata: &'a mut SudokuSolver) -> Command<Message> {
-      if let Some((row, column)) = appdata.selected {
-          appdata.sudoku.puzzle[row][column] = input
-      }
-      if let Some(conflicts) = appdata.sudoku.validate() {
-          appdata.sudoku.conflicts = conflicts
-      } else {
-          appdata.sudoku.conflicts.clear()
+      let tab = &mut appdata.tabs[appdata.active_tab];
+      let sudoku_maybe = &mut tab.sudoku;
+      let selected  = &mut tab.selected;
+
+      if let Some(ref mut sudoku) = sudoku_maybe {
+        if let Some((row, column)) = selected {
+            sudoku.puzzle[*row][*column] = input
+        }
+        if let Some(conflicts) = sudoku.validate() {
+            sudoku.conflicts = conflicts
+        } else {
+            sudoku.conflicts.clear()
+        }
+
       }
 
       Command::none()
     }
 
     fn select(row: usize, column: usize, appdata: &'a mut SudokuSolver) -> Command<Message> {
-      appdata.selected = Some((row, column));      
+      let active_tab = &mut appdata.tabs[appdata.active_tab];
+      if active_tab.solving {return Command::none()};
+
+      active_tab.selected = Some((row, column));      
 
       Command::none()
     }
 
     fn clearselected(appdata: &'a mut SudokuSolver) -> Command<Message> {
-      appdata.selected = None;
+      appdata.tabs[appdata.active_tab].selected = None;
 
       Command::none()
     }
 
     fn solve_result(result: Option<Vec<Vec<u8>>>, appdata: &'a mut SudokuSolver) -> Command<Message> {
       if let Some(puzzle) = result {
-          appdata.sudoku = Sudoku::from_puzzle(puzzle)
+          appdata.tabs[appdata.active_tab].sudoku = Some(Sudoku::from_puzzle(puzzle))
       }
+      appdata.tabs[appdata.active_tab].solving = false;
 
       Command::none()
     } 
