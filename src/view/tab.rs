@@ -1,4 +1,4 @@
-use iced::{theme, widget::{self, button, column, container, row, text}, Element, Length};
+use iced::{theme, widget::{self, button, column, container, row, text}, Element, Length, Padding};
 
 use crate::{styles::ThickRule, sudoku::Sudoku, update::{Message, SudokuSize}};
 
@@ -7,14 +7,16 @@ use crate::{styles::ThickRule, sudoku::Sudoku, update::{Message, SudokuSize}};
 
 
 pub struct Tab {
+    pub id: u16,
     pub sudoku: Option<Sudoku>,
     pub selected: Option<(usize, usize)>,
     pub solving: bool,
 }
 
 impl<'a> Tab {
-    pub fn new() -> Self {
+    pub fn new(id: u16) -> Self {
         Self {
+            id,
             sudoku: None,
             selected: None,
             solving: false,
@@ -24,7 +26,7 @@ impl<'a> Tab {
     pub fn view(&'a self) -> iced::Element<'a, Message> {
       let center:Element<'a, Message> = match &self.sudoku {
         Some(sudoku) => {
-          let sudoku_grid = Self::sudoku_grid(&self.selected, &sudoku);
+          let sudoku_grid = Self::sudoku_grid(self.solving, &self.selected, &sudoku);
 
           let mut number_buttons = row![]
               .height(Length::Shrink)
@@ -133,14 +135,14 @@ impl<'a> Tab {
         }
       };
 
-      container(center).padding(20).into()
+      container(center).padding(Padding {bottom: 10., left: 10., right: 10., top: 0.}).into()
 
     }
 
-      fn sudoku_grid(selected: &Option<(usize, usize)>, sudoku: &'a Sudoku) -> Element<'a, Message> {
+    fn sudoku_grid(solving: bool, selected: &Option<(usize, usize)>, sudoku: &'a Sudoku) -> Element<'a, Message> {
         let mut column = column![].push(widget::Rule::horizontal(1)
-              .style(theme::Rule::Custom(Box::new(ThickRule))))
-              .align_items(iced::Alignment::Center);
+                .style(theme::Rule::Custom(Box::new(ThickRule))))
+                .align_items(iced::Alignment::Center);
 
         for (rowindex,row) in sudoku.puzzle.iter().enumerate() {
             let mut row_widget = row![]
@@ -163,7 +165,7 @@ impl<'a> Tab {
                     .width(Length::Fill)
                     .height(Length::Fill)
                     .style(theme::Button::Text)
-                    .on_press(Message::Select(rowindex, columnindex));
+                    .on_press_maybe(if solving {None} else {Some(Message::Select(rowindex, columnindex))});
                 
                 if let Some((row, column)) = selected {
                     if *row == rowindex && *column == columnindex {
@@ -194,5 +196,5 @@ impl<'a> Tab {
             }
         }
         column.into()
-      }
+    }
 }

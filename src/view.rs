@@ -18,23 +18,49 @@ pub fn view<'a>(appdata: &'a SudokuSolver) -> iced::Element<'a, Message> {
 
 
 fn tab_row<'a>(tabs: &'a Vec<Tab>, active_tab: usize) -> Element<'a, Message> {
-  let mut tab_row = row![].spacing(10);
+  let mut tab_row = row![].spacing(10).padding(10);
 
-  for i in 0..tabs.len() {
-    let tab_name = format!("Tab {}", i+1);
-    let mut button = button(text(tab_name)
+  for (i, ref tab) in tabs.iter().enumerate() {
+    let tab_name = match tab.sudoku {
+      Some(ref sudoku) => format!("{} X {}", sudoku.size, sudoku.size),
+      None => format!("Tab {}", i+1),
+    };
+
+    let tab_name = text(tab_name)
       .horizontal_alignment(iced::alignment::Horizontal::Center)
       .vertical_alignment(iced::alignment::Vertical::Center)
       .height(Length::Fill)
       .width(Length::Fill)
-      .size(20)
-    )
-    .width(80)
-    .height(40)
-    .on_press(Message::SetActiveTab(i));
+      .size(12);
+
+    let mut close_tab = button(text("x")
+        .horizontal_alignment(iced::alignment::Horizontal::Center)
+        .vertical_alignment(iced::alignment::Vertical::Center)
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .size(6)
+      )
+      .width(25)
+      .height(25)
+      .on_press(Message::CloseTab(i));
 
     if i == active_tab {
-      button = button.style(theme::Button::custom(styles::ActiveTab))
+      close_tab = close_tab.style(theme::Button::custom(styles::ActiveTab))
+    }
+
+    let text_close_row = row![tab_name, close_tab]
+      .spacing(5)
+      .width(Length::Fill)
+      .height(Length::Fill)
+      .align_items(iced::Alignment::Center);
+
+    let mut button = button(text_close_row)
+      .width(80)
+      .height(40)
+      .on_press(Message::SetActiveTab(i));
+
+    if i == active_tab {
+      button = button.style(theme::Button::custom(styles::ActiveTab));
     }
 
     tab_row = tab_row.push(button)
@@ -45,6 +71,7 @@ fn tab_row<'a>(tabs: &'a Vec<Tab>, active_tab: usize) -> Element<'a, Message> {
     .vertical_alignment(iced::alignment::Vertical::Center)
     .height(Length::Fill)
     .width(Length::Fill)
+    .size(16)
   )
   .width(40)
   .height(40)

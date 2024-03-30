@@ -49,41 +49,41 @@ impl<'a> Sudoku {
             let (sx,sy) = (x - (x % nmax_sqr), y - (y % nmax_sqr));  
 
             'Increment: for n in 1..=nmax + 1 {
-            let n = n as u8;
+                let n = n as u8;
 
-            //validate current row and column for number "n"
-            for i in 0..=nmax {
-                if (i,y) != coord {
-                if puzzle[i][y] == n {
-                    continue 'Increment;
-                }
-                }
-                if (x,i) != coord {
-                if puzzle[x][i] == n {
-                    continue 'Increment;
-                }
-                }
-            }
-                
-            //Validate the square you are in for number "n"
-            for i in 0..nmax_sqr {
-                for ii in 0..nmax_sqr {
-                if (sx + i, sy + ii) != coord {
-                    if puzzle[sx + i][sy + ii] == n {
-                    continue 'Increment
+                //validate current row and column for number "n"
+                for i in 0..=nmax {
+                    if (i,y) != coord {
+                    if puzzle[i][y] == n {
+                        continue 'Increment;
+                    }
+                    }
+                    if (x,i) != coord {
+                    if puzzle[x][i] == n {
+                        continue 'Increment;
+                    }
                     }
                 }
+                    
+                //Validate the square you are in for number "n"
+                for i in 0..nmax_sqr {
+                    for ii in 0..nmax_sqr {
+                    if (sx + i, sy + ii) != coord {
+                        if puzzle[sx + i][sy + ii] == n {
+                        continue 'Increment
+                        }
+                    }
+                    }
                 }
-            }
-            puzzle[x][y] = n as u8;
-                
-            if y == nmax {
-                if Self::solver(puzzle, nmax,nmax_sqr, (x + 1, 0)) {
-                return true
+                puzzle[x][y] = n as u8;
+                    
+                if y == nmax {
+                    if Self::solver(puzzle, nmax,nmax_sqr, (x + 1, 0)) {
+                    return true
+                    }
+                } else if Self::solver(puzzle, nmax, nmax_sqr, (x, y + 1)) {
+                    return true
                 }
-            } else if Self::solver(puzzle, nmax, nmax_sqr, (x, y + 1)) {
-                return true
-            }
             // Continues to try the next number for the current position
             }
 

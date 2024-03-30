@@ -24,6 +24,7 @@ fn main() {
 
 struct SudokuSolver {
     theme: Theme,
+    tab_id_counter: u16,
     active_tab: usize,
     tabs: Vec<Tab>,
 }
@@ -37,8 +38,9 @@ impl iced::Application for SudokuSolver {
     fn new(_flags: Self::Flags) -> (Self, Command<Message>) {
         let app = Self {
             theme: Theme::Dark,
+            tab_id_counter: 1,
             active_tab: 0,
-            tabs: vec![Tab::new()],
+            tabs: vec![Tab::new(0)],
         };
 
         (app, Command::none())
@@ -199,7 +201,7 @@ impl iced::Application for SudokuSolver {
                         Named::ArrowLeft => Some(KeyMessage::Left.into()),
                         Named::ArrowRight => Some(KeyMessage::Right.into()),
                         Named::Escape => Some(Message::ClearSelected),
-                        Named::Backspace => Some(Message::Input(0)),
+                        Named::Backspace => Some(Message::ClearInput),
                         _ => None
                     }
                 }
