@@ -1,6 +1,6 @@
 use iced::Command;
 
-use crate::{sudoku, SudokuSolver};
+use crate::SudokuSolver;
 
 use super::Message;
 

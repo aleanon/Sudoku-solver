@@ -1,3 +1,5 @@
+use crossbeam::channel::Receiver;
+
 
 
 #[derive(Debug, Clone)]
@@ -30,16 +32,23 @@ impl<'a> Sudoku {
         sudoku
     }
 
-    pub fn solve(&self) -> Option<Vec<Vec<u8>>> {
+    pub fn solve(&self, receiver: Receiver<()>) -> Option<Vec<Vec<u8>>> {
         let nmax = (self.size - 1) as usize;
         let nmax_sqr = (self.size as f32).sqrt() as usize;
         let mut puzzle = self.puzzle.clone();
 
-        Self::solver(&mut puzzle, nmax, nmax_sqr, (0,0)).then(||puzzle)
+        Self::solver(&mut puzzle, nmax, nmax_sqr, (0,0), receiver).then(||puzzle)
     }
 
-    fn solver(puzzle: &mut Vec<Vec<u8>>, nmax:usize,nmax_sqr: usize, coord @ (x,y):(usize,usize)) -> bool {
-    
+    fn solver(puzzle: &mut Vec<Vec<u8>>, 
+        nmax:usize,
+        nmax_sqr: usize, 
+        coord @ (x,y):(usize,usize),
+        receiver: Receiver<()>
+    ) -> bool {
+        
+        if receiver.is_full() {return false}
+
         if x == nmax + 1 {
         return true
         } 
@@ -78,10 +87,10 @@ impl<'a> Sudoku {
                 puzzle[x][y] = n as u8;
                     
                 if y == nmax {
-                    if Self::solver(puzzle, nmax,nmax_sqr, (x + 1, 0)) {
+                    if Self::solver(puzzle, nmax,nmax_sqr, (x + 1, 0), receiver.clone()) {
                     return true
                     }
-                } else if Self::solver(puzzle, nmax, nmax_sqr, (x, y + 1)) {
+                } else if Self::solver(puzzle, nmax, nmax_sqr, (x, y + 1), receiver.clone()) {
                     return true
                 }
             // Continues to try the next number for the current position
@@ -89,9 +98,9 @@ impl<'a> Sudoku {
 
         } else {
         if y == nmax {
-            return Self::solver(puzzle, nmax, nmax_sqr, (x + 1, 0))
+            return Self::solver(puzzle, nmax, nmax_sqr, (x + 1, 0), receiver.clone())
         }
-        return Self::solver(puzzle, nmax, nmax_sqr, (x, y + 1)) 
+        return Self::solver(puzzle, nmax, nmax_sqr, (x, y + 1), receiver.clone()) 
         } 
         puzzle[x][y] = 0;
         false

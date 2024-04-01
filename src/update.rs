@@ -1,7 +1,7 @@
 pub mod key_message;
 
 
-use iced::{command, Command, Theme};
+use iced::{Command, Theme};
 
 use crate::{sudoku::Sudoku, view::tab::Tab, SudokuSolver};
 
@@ -100,10 +100,19 @@ impl<'a> Message {
             let tab_id = active_tab.id;
             sudoku.conflicts.clear();
             let sudoku = sudoku.clone();
-            
+            let (sender, receiver) = crossbeam::channel::bounded::<()>(1);
+            active_tab.sender = Some(sender);
+
             return Command::perform(
                 async move {
-                  (tab_id,sudoku.solve())
+                  let thread = std::thread::spawn(
+                    move || {
+                      sudoku.solve(receiver.clone())
+                    }
+                  );
+
+                  let result = thread.join().ok().and_then(|result| result);
+                  (tab_id, result)
                 }, 
                 |(id, result)| Message::SolveResult(id, result)
             )
@@ -191,6 +200,7 @@ impl<'a> Message {
               tab.sudoku = Some(Sudoku::from_puzzle(puzzle))
           }
           tab.solving = false;
+          tab.sender = None;
         }
       }
 
@@ -206,14 +216,20 @@ impl<'a> Message {
       if appdata.tabs.len() -1 == appdata.active_tab {
         appdata.active_tab = appdata.active_tab -1
       }
-      //make the tab cancel ongoing solving in different thread
+
       let tab = appdata.tabs.remove(tab_id);
+
+      if let Some(ref sender) = tab.sender {
+        sender.try_send(()).ok();
+      }
 
       Command::none()
     }
 
     fn abort_solving(appdata: &'a mut SudokuSolver) -> Command<Message> {
-
+      if let Some(ref sender) = appdata.tabs[appdata.active_tab].sender {
+        sender.try_send(()).ok();
+      }
 
       Command::none()
     } 

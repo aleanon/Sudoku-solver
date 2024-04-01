@@ -1,6 +1,6 @@
 pub mod tab;
 
-use iced::{theme, widget::{button, column, row, text}, Element, Length};
+use iced::{theme, widget::{button, column, container, row, text}, Element, Length};
 
 use crate::{styles, update::Message, SudokuSolver};
 
@@ -18,7 +18,7 @@ pub fn view<'a>(appdata: &'a SudokuSolver) -> iced::Element<'a, Message> {
 
 
 fn tab_row<'a>(tabs: &'a Vec<Tab>, active_tab: usize) -> Element<'a, Message> {
-  let mut tab_row = row![].spacing(10).padding(10);
+  let mut tab_row = row![].spacing(10).align_items(iced::Alignment::Center).clip(true);
 
   for (i, ref tab) in tabs.iter().enumerate() {
     let tab_name = match tab.sudoku {
@@ -38,7 +38,7 @@ fn tab_row<'a>(tabs: &'a Vec<Tab>, active_tab: usize) -> Element<'a, Message> {
         .vertical_alignment(iced::alignment::Vertical::Center)
         .height(Length::Fill)
         .width(Length::Fill)
-        .size(6)
+        .size(8)
       )
       .width(25)
       .height(25)
@@ -48,20 +48,24 @@ fn tab_row<'a>(tabs: &'a Vec<Tab>, active_tab: usize) -> Element<'a, Message> {
       close_tab = close_tab.style(theme::Button::custom(styles::ActiveTab))
     }
 
-    let text_close_row = row![tab_name, close_tab]
+
+    let text_close_tab = row![tab_name, close_tab]
       .spacing(5)
       .width(Length::Fill)
       .height(Length::Fill)
       .align_items(iced::Alignment::Center);
 
-    let mut button = button(text_close_row)
-      .width(80)
-      .height(40)
+    let mut button = button(text_close_tab)
+      .width(Length::Fill)
+      .height(Length::Fill)
       .on_press(Message::SetActiveTab(i));
 
     if i == active_tab {
       button = button.style(theme::Button::custom(styles::ActiveTab));
     }
+    
+    let button = container(button).height(40).width(80).max_width(80);
+
 
     tab_row = tab_row.push(button)
   }   
@@ -73,9 +77,14 @@ fn tab_row<'a>(tabs: &'a Vec<Tab>, active_tab: usize) -> Element<'a, Message> {
     .width(Length::Fill)
     .size(16)
   )
-  .width(40)
-  .height(40)
+  .width(35)
+  .height(35)
+  .style(theme::Button::custom(styles::NewTabButton))
   .on_press(Message::NewTab);
 
-  tab_row.push(new_tab_button).into()  
+  let space = iced::widget::Space::new(Length::Fill, 1);
+
+  let theme_button = button(text("T")).height(40).width(40).on_press(Message::ToggleTheme);
+
+  row![tab_row, new_tab_button, space, theme_button].align_items(iced::Alignment::Center).padding(10).spacing(10).into()
 }

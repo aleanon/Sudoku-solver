@@ -1,5 +1,5 @@
 
-use iced::{keyboard::{key::Named, Key}, theme, widget::{self, button, column, container, row, text}, window, Application, Command, Length, Settings, Size, Theme };
+use iced::{keyboard::{key::Named, Key}, window, Application, Command, Settings, Size, Theme };
 use update::{key_message::KeyMessage, Message};
 use view::tab::Tab;
 
